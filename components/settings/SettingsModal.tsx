@@ -139,20 +139,49 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-slate-800 border-slate-700">
-                      <SelectItem value="meta-llama/llama-3.1-8b-instruct:free">
-                        Llama 3.1 8B (Free)
+                      {/* PREMIUM FREE MODELS */}
+                      <SelectItem value="deepseek/deepseek-chat-v3.1:free">
+                        🔥 DeepSeek V3.1 (Free) - Best for Research
                       </SelectItem>
+                      <SelectItem value="openai/gpt-oss-20b:free">
+                        🚀 OpenAI GPT-OSS-20B (Free) - 21B params
+                      </SelectItem>
+                      <SelectItem value="qwen/qwen3-coder:free">
+                        💻 Qwen3 Coder 480B (Free) - Best for Code
+                      </SelectItem>
+                      <SelectItem value="z-ai/glm-4.5-air:free">
+                        🤖 GLM 4.5 Air (Free) - Agent Optimized
+                      </SelectItem>
+                      <SelectItem value="nvidia/nemotron-nano-9b-v2:free">
+                        🧠 NVIDIA Nemotron 9B (Free) - Reasoning
+                      </SelectItem>
+                      <SelectItem value="meituan/longcat-flash-chat:free">
+                        ⚡ LongCat Flash Chat (Free) - 560B params
+                      </SelectItem>
+                      <SelectItem value="alibaba/tongyi-deepresearch-30b-a3b:free">
+                        🔬 Tongyi DeepResearch (Free) - Research Focus
+                      </SelectItem>
+                      <SelectItem value="moonshotai/kimi-k2:free">
+                        🌙 Kimi K2 (Free) - 1T params MoE
+                      </SelectItem>
+                      
+                      {/* CLASSIC FREE MODELS */}
+                      <SelectItem value="meta-llama/llama-3.1-8b-instruct:free">
+                        🦙 Llama 3.1 8B (Free) - Classic
+                      </SelectItem>
+                      
+                      {/* PAID MODELS */}
                       <SelectItem value="google/gemini-flash-1.5">
-                        Gemini Flash 1.5
+                        💎 Gemini Flash 1.5 (Paid)
                       </SelectItem>
                       <SelectItem value="anthropic/claude-3-haiku">
-                        Claude 3 Haiku
+                        💎 Claude 3 Haiku (Paid)
                       </SelectItem>
                       <SelectItem value="openai/gpt-3.5-turbo">
-                        GPT-3.5 Turbo
+                        💎 GPT-3.5 Turbo (Paid)
                       </SelectItem>
                       <SelectItem value="openai/gpt-4o-mini">
-                        GPT-4o Mini
+                        💎 GPT-4o Mini (Paid)
                       </SelectItem>
                     </SelectContent>
                   </Select>

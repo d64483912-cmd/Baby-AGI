@@ -5,13 +5,13 @@ import type { AgentState, Task, LogEntry, Settings } from '../types';
 const defaultSettings: Settings = {
   apiKey: '',
   provider: 'openrouter',
-  model: 'meta-llama/llama-3.1-8b-instruct:free',
-  temperature: 0.7,
+  model: 'deepseek/deepseek-chat-v3.1:free',
+  temperature: 0.3, // Lower for medical research accuracy
   iterationDelay: 1000,
-  maxTokens: 1000,
+  maxTokens: 2000, // Higher for detailed research
   enableSounds: false,
   autoScroll: true,
-  maxIterations: 20,
+  maxIterations: 15, // Optimized for research
 };
 
 interface AgentStore extends AgentState {

@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useAgentStore } from '@/lib/stores/agentStore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LogEntry } from './LogEntry';
+import { AnimatePresence } from 'framer-motion';
 
 export function ExecutionLog() {
   const { executionLog, settings } = useAgentStore();

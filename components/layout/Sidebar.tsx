@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TaskQueue } from '../task/TaskQueue';
 import { useAgent } from '@/lib/hooks/useAgent';
+import { Play, Pause, RotateCcw, Download, ChevronRight, ChevronLeft } from 'lucide-react';
 
 export function Sidebar() {
   const { objective, setObjective, isRunning, isPaused, sidebarCollapsed, toggleSidebar } = useAgentStore();

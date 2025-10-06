@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useAgentStore } from '../stores/agentStore';
 import { generateInitialTasks, generateFollowUpTasks, prioritizeTasks } from '../services/taskGenerator';
 import { executeTaskWithAI, simulateTaskExecution } from '../services/apiService';
@@ -8,17 +8,137 @@ export function useAgent() {
   const store = useAgentStore();
   const agentLoopRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    if (store.isRunning && !store.isPaused) {
-      startAgentLoop();
-    } else {
+  const stopAgentLoop = useCallback(() => {
+    if (agentLoopRef.current) {
+      clearInterval(agentLoopRef.current);
+      agentLoopRef.current = null;
+    }
+  }, []);
+
+  const executeAgentIteration = useCallback(async () => {
+    const pendingTasks = store.tasks.filter(t => t.status === 'pending');
+    
+    if (pendingTasks.length === 0 || store.currentIteration >= store.maxIterations) {
+      store.setIsRunning(false);
       stopAgentLoop();
+      
+      if (store.currentIteration >= store.maxIterations) {
+        store.addLog({
+          id: `log-${Date.now()}`,
+          timestamp: Date.now(),
+          type: 'warning',
+          message: `Reached maximum iterations (${store.maxIterations})`,
+          icon: '⚠️'
+        });
+      } else {
+        store.addLog({
+          id: `log-${Date.now()}`,
+          timestamp: Date.now(),
+          type: 'milestone',
+          message: '🎉 All tasks completed! Objective achieved!',
+          icon: '🎯'
+        });
+      }
+      return;
     }
 
-    return () => stopAgentLoop();
-  }, [store.isRunning, store.isPaused]);
+    const nextTask = pendingTasks[0];
+    store.updateTask(nextTask.id, { status: 'running' });
+    store.setCurrentIteration(store.currentIteration + 1);
 
-  const startAgentLoop = () => {
+    store.addLog({
+      id: `log-${Date.now()}-start`,
+      timestamp: Date.now(),
+      type: 'task',
+      message: `Starting: ${nextTask.description}`,
+      icon: '▶️'
+    });
+
+    store.addLog({
+      id: `log-${Date.now()}-processing`,
+      timestamp: Date.now(),
+      type: 'thinking',
+      message: 'Processing task...',
+      icon: '🔍'
+    });
+
+    try {
+      let result: string;
+      
+      if (store.mode === 'ai') {
+        result = await executeTaskWithAI(nextTask, store.objective, store.settings);
+      } else {
+        result = await simulateTaskExecution(nextTask);
+      }
+
+      store.updateTask(nextTask.id, { 
+        status: 'completed', 
+        result,
+        completedAt: Date.now()
+      });
+
+      store.addLog({
+        id: `log-${Date.now()}-complete`,
+        timestamp: Date.now(),
+        type: 'success',
+        message: `Completed: ${nextTask.description}`,
+        icon: '✅'
+      });
+
+      store.addLog({
+        id: `log-${Date.now()}-result`,
+        timestamp: Date.now(),
+        type: 'result',
+        message: `Result: ${result}`,
+        icon: '📊'
+      });
+
+      // Generate follow-up tasks
+      const followUpTasks = generateFollowUpTasks(nextTask, result, store.objective);
+      
+      if (followUpTasks.length > 0) {
+        followUpTasks.forEach(task => store.addTask(task));
+        store.addLog({
+          id: `log-${Date.now()}-followup`,
+          timestamp: Date.now(),
+          type: 'info',
+          message: `Generated ${followUpTasks.length} follow-up task(s)`,
+          icon: '📝'
+        });
+      }
+
+      // Add milestone logs
+      const completedCount = store.tasks.filter(t => t.status === 'completed').length;
+      const totalCount = store.tasks.length;
+      const progress = (completedCount / totalCount) * 100;
+
+      if (progress === 25 || progress === 50 || progress === 75 || progress === 100) {
+        store.addLog({
+          id: `log-${Date.now()}-milestone`,
+          timestamp: Date.now(),
+          type: 'milestone',
+          message: `Milestone: ${Math.round(progress)}% complete!`,
+          icon: '🎯'
+        });
+      }
+
+    } catch (error) {
+      store.updateTask(nextTask.id, { 
+        status: 'failed',
+        result: error instanceof Error ? error.message : 'Unknown error'
+      });
+
+      store.addLog({
+        id: `log-${Date.now()}-error`,
+        timestamp: Date.now(),
+        type: 'error',
+        message: `Failed: ${nextTask.description} - ${error instanceof Error ? error.message : 'Unknown error'}`,
+        icon: '❌'
+      });
+    }
+  }, [store, stopAgentLoop]);
+
+  const startAgentLoop = useCallback(() => {
     if (agentLoopRef.current) return;
 
     agentLoopRef.current = setInterval(async () => {
@@ -27,171 +147,79 @@ export function useAgent() {
 
     // Execute first iteration immediately
     executeAgentIteration();
-  };
+  }, [store.settings.iterationDelay, executeAgentIteration]);
 
-  const stopAgentLoop = () => {
-    if (agentLoopRef.current) {
-      clearInterval(agentLoopRef.current);
-      agentLoopRef.current = null;
-    }
-  };
-
-  const executeAgentIteration = async () => {
-    const state = useAgentStore.getState();
-
-    // Check if we should stop
-    if (!state.isRunning || state.isPaused) {
+  useEffect(() => {
+    if (store.isRunning && !store.isPaused) {
+      startAgentLoop();
+    } else {
       stopAgentLoop();
-      return;
     }
 
-    // Check max iterations
-    if (state.currentIteration >= state.maxIterations) {
-      state.addLog({
-        type: 'milestone',
-        message: `🎯 Reached maximum iterations (${state.maxIterations}). Agent stopped.`,
-        icon: '🎯',
-      });
-      state.pauseAgent();
-      stopAgentLoop();
-      return;
-    }
+    return () => stopAgentLoop();
+  }, [store.isRunning, store.isPaused, startAgentLoop, stopAgentLoop]);
 
-    // Initialize tasks if empty
-    if (state.tasks.length === 0 && state.objective) {
-      const initialTasks = generateInitialTasks(state.objective);
-      initialTasks.forEach(task => state.addTask(task));
-      state.addLog({
-        type: 'info',
-        message: `📝 Generated ${initialTasks.length} initial tasks`,
-        icon: '📝',
+  const startAgent = () => {
+    if (!store.objective.trim()) {
+      store.addLog({
+        id: `log-${Date.now()}`,
+        timestamp: Date.now(),
+        type: 'error',
+        message: 'Please enter an objective first',
+        icon: '❌'
       });
       return;
     }
 
-    // Get next pending task
-    const sortedTasks = prioritizeTasks(state.tasks);
-    const nextTask = sortedTasks.find(t => t.status === 'pending' && !hasPendingDependencies(t, state.tasks));
-
-    if (!nextTask) {
-      // No more tasks - check if we should generate more or stop
-      const completedTasks = state.tasks.filter(t => t.status === 'completed');
-      const allCompleted = state.tasks.every(t => t.status === 'completed' || t.status === 'failed');
-
-      if (allCompleted && completedTasks.length > 0) {
-        state.addLog({
-          type: 'milestone',
-          message: `✅ All tasks completed! Objective achieved.`,
-          icon: '✅',
-        });
-        state.pauseAgent();
-        stopAgentLoop();
-      }
-      return;
-    }
-
-    // Execute the task
-    state.incrementIteration();
-    state.updateTask(nextTask.id, { status: 'running' });
-    state.addLog({
-      type: 'task',
-      message: `▶️ Starting: ${nextTask.description}`,
-      icon: '▶️',
+    const initialTasks = generateInitialTasks(store.objective);
+    const prioritizedTasks = prioritizeTasks(initialTasks);
+    
+    prioritizedTasks.forEach(task => store.addTask(task));
+    
+    store.addLog({
+      id: `log-${Date.now()}`,
+      timestamp: Date.now(),
+      type: 'info',
+      message: `Generated ${initialTasks.length} initial tasks`,
+      icon: '📝'
     });
 
-    try {
-      let result: string;
-
-      if (state.mode === 'ai' && state.settings.apiKey) {
-        state.addLog({
-          type: 'thinking',
-          message: '💭 AI is thinking...',
-          icon: '💭',
-        });
-
-        const response = await executeTaskWithAI(nextTask.description, state.objective, state.settings);
-        
-        if (response.error) {
-          throw new Error(response.error);
-        }
-        
-        result = response.content;
-      } else {
-        state.addLog({
-          type: 'info',
-          message: '🔍 Processing task...',
-          icon: '🔍',
-        });
-        result = await simulateTaskExecution(nextTask.description);
-      }
-
-      state.completeTask(nextTask.id, result);
-      state.addLog({
-        type: 'success',
-        message: `✅ Completed: ${nextTask.description}`,
-        icon: '✅',
-      });
-      state.addLog({
-        type: 'result',
-        message: `📊 Result: ${result}`,
-        icon: '📊',
-      });
-
-      // Generate follow-up tasks
-      const followUpTasks = generateFollowUpTasks(nextTask, result, state.objective);
-      if (followUpTasks.length > 0) {
-        followUpTasks.forEach(task => state.addTask(task));
-        state.addLog({
-          type: 'info',
-          message: `📝 Generated ${followUpTasks.length} follow-up task(s)`,
-          icon: '📝',
-        });
-      }
-
-      // Check milestones
-      const completedCount = state.tasks.filter(t => t.status === 'completed').length;
-      const totalCount = state.tasks.length;
-      const progress = Math.floor((completedCount / totalCount) * 100);
-
-      if ([25, 50, 75].includes(progress)) {
-        state.addLog({
-          type: 'milestone',
-          message: `🎯 Milestone: ${progress}% complete!`,
-          icon: '🎯',
-        });
-      }
-
-    } catch (error) {
-      state.updateTask(nextTask.id, { status: 'failed' });
-      state.addLog({
-        type: 'error',
-        message: `❌ Failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        icon: '❌',
-      });
-    }
+    store.setIsRunning(true);
+    store.setIsPaused(false);
   };
 
-  const hasPendingDependencies = (task: Task, allTasks: Task[]): boolean => {
-    if (!task.dependencies || task.dependencies.length === 0) return false;
-    return task.dependencies.some(depId => {
-      const depTask = allTasks.find(t => t.id === depId);
-      return depTask && depTask.status !== 'completed';
+  const pauseAgent = () => {
+    store.setIsPaused(!store.isPaused);
+    
+    store.addLog({
+      id: `log-${Date.now()}`,
+      timestamp: Date.now(),
+      type: 'info',
+      message: store.isPaused ? 'Agent resumed' : 'Agent paused',
+      icon: store.isPaused ? '▶️' : '⏸️'
+    });
+  };
+
+  const resetAgent = () => {
+    stopAgentLoop();
+    store.setIsRunning(false);
+    store.setIsPaused(false);
+    store.setCurrentIteration(0);
+    store.clearTasks();
+    store.clearLogs();
+    
+    store.addLog({
+      id: `log-${Date.now()}`,
+      timestamp: Date.now(),
+      type: 'info',
+      message: 'Agent reset',
+      icon: '🔄'
     });
   };
 
   return {
-    startAgent: () => {
-      if (!store.objective.trim()) {
-        store.addLog({
-          type: 'error',
-          message: '❌ Please enter an objective first',
-          icon: '❌',
-        });
-        return;
-      }
-      store.startAgent();
-    },
-    pauseAgent: store.pauseAgent,
-    resetAgent: store.resetAgent,
+    startAgent,
+    pauseAgent,
+    resetAgent
   };
 }

@@ -17,6 +17,7 @@ const defaultSettings: Settings = {
 interface AgentStore extends AgentState {
   setObjective: (objective: string) => void;
   startAgent: () => void;
+  stopAgent: () => void;
   pauseAgent: () => void;
   resetAgent: () => void;
   addTask: (task: Task) => void;
@@ -51,6 +52,8 @@ export const useAgentStore = create<AgentStore>()(
       setObjective: (objective) => set({ objective }),
 
       startAgent: () => set({ isRunning: true, isPaused: false }),
+
+      stopAgent: () => set({ isRunning: false }),
 
       pauseAgent: () => set({ isPaused: true }),
 

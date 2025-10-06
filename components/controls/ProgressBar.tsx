@@ -1,6 +1,5 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { useAgentStore } from '@/lib/stores/agentStore';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';

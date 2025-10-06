@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useAgentStore } from '@/lib/stores/agentStore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LogEntry } from './LogEntry';

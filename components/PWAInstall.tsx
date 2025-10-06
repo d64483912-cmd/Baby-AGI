@@ -5,25 +5,23 @@ import { Button } from '@/components/ui/button';
 import { Download, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
 export function PWAInstall() {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showInstall, setShowInstall] = useState(false);
 
   useEffect(() => {
     const handler = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e);
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
       setShowInstall(true);
     };
 
     window.addEventListener('beforeinstallprompt', handler);
-
-    // Register service worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch((error) => {
-        console.error('Service Worker registration failed:', error);
-      });
-    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
@@ -35,65 +33,52 @@ export function PWAInstall() {
 
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    
+
     if (outcome === 'accepted') {
-      setDeferredPrompt(null);
       setShowInstall(false);
     }
+
+    setDeferredPrompt(null);
   };
+
+  if (!showInstall) return null;
 
   return (
     <AnimatePresence>
-      {showInstall && (
-        <motion.div
-          initial={{ y: 100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 100, opacity: 0 }}
-          className="fixed bottom-6 right-6 z-50 max-w-sm"
-        >
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow-2xl backdrop-blur-md">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                <span className="text-2xl">🤖</span>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-sm font-semibold text-slate-100 mb-1">
-                  Install BabyAGI PWA
-                </h3>
-                <p className="text-xs text-slate-400 mb-3">
-                  Install this app for offline access and a better experience
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleInstall}
-                    size="sm"
-                    className="bg-blue-500 hover:bg-blue-600 text-white"
-                  >
-                    <Download className="w-3 h-3 mr-2" />
-                    Install
-                  </Button>
-                  <Button
-                    onClick={() => setShowInstall(false)}
-                    size="sm"
-                    variant="ghost"
-                    className="text-slate-400 hover:text-slate-100"
-                  >
-                    Later
-                  </Button>
-                </div>
-              </div>
+      <motion.div
+        initial={{ opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 50 }}
+        className="fixed bottom-4 right-4 z-50 max-w-sm"
+      >
+        <div className="bg-card border border-border rounded-lg shadow-lg p-4 flex items-start gap-3">
+          <Download className="h-5 w-5 text-primary mt-0.5" />
+          <div className="flex-1">
+            <h3 className="font-semibold text-sm mb-1">Install BabyAGI PWA</h3>
+            <p className="text-xs text-muted-foreground mb-3">
+              Install this app for a better experience and offline access.
+            </p>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleInstall}>
+                Install
+              </Button>
               <Button
-                onClick={() => setShowInstall(false)}
-                size="icon"
+                size="sm"
                 variant="ghost"
-                className="h-6 w-6 text-slate-400 hover:text-slate-100"
+                onClick={() => setShowInstall(false)}
               >
-                <X className="w-4 h-4" />
+                Not now
               </Button>
             </div>
           </div>
-        </motion.div>
-      )}
+          <button
+            onClick={() => setShowInstall(false)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </motion.div>
     </AnimatePresence>
   );
 }

@@ -1,13 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAgentStore } from '@/lib/stores/agentStore';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { Play, Pause, RotateCcw, Download, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
 import { TaskQueue } from '../task/TaskQueue';
 import { useAgent } from '@/lib/hooks/useAgent';
 

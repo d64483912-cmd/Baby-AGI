@@ -50,7 +50,7 @@ export function generateInitialTasks(objective: string): Task[] {
   return tasks;
 }
 
-export function generateFollowUpTasks(completedTask: Task, result: string, objective: string): Task[] {
+export function generateFollowUpTasks(completedTask: Task, _result: string, _objective: string): Task[] {
   const tasks: Task[] = [];
   const keywords = extractKeywords(completedTask.description);
   const mainKeyword = keywords[0] || 'the task';

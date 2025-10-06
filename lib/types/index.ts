@@ -20,7 +20,7 @@ export interface LogEntry {
   type: LogType;
   message: string;
   icon: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface Settings {

@@ -33,7 +33,7 @@ interface AgentStore extends AgentState {
 
 export const useAgentStore = create<AgentStore>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       objective: '',
       tasks: [],
       executionLog: [],

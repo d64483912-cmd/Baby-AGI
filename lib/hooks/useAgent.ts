@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useAgentStore } from '../stores/agentStore';
 import { generateInitialTasks, generateFollowUpTasks, prioritizeTasks } from '../services/taskGenerator';
-import { executeTaskWithAI, generateTasksWithAI, simulateTaskExecution } from '../services/apiService';
+import { executeTaskWithAI, simulateTaskExecution } from '../services/apiService';
 import type { Task } from '../types';
 
 export function useAgent() {

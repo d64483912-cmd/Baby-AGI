@@ -2,7 +2,6 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useAgentStore } from '../stores/agentStore';
 import { generateInitialTasks, generateFollowUpTasks, prioritizeTasks } from '../services/taskGenerator';
 import { executeTaskWithAI, simulateTaskExecution } from '../services/apiService';
-import type { Task } from '../types';
 
 export function useAgent() {
   const store = useAgentStore();
@@ -19,21 +18,17 @@ export function useAgent() {
     const pendingTasks = store.tasks.filter(t => t.status === 'pending');
     
     if (pendingTasks.length === 0 || store.currentIteration >= store.maxIterations) {
-      store.setIsRunning(false);
+      store.startAgent(); // This will set isRunning to false when called again
       stopAgentLoop();
       
       if (store.currentIteration >= store.maxIterations) {
         store.addLog({
-          id: `log-${Date.now()}`,
-          timestamp: Date.now(),
           type: 'warning',
           message: `Reached maximum iterations (${store.maxIterations})`,
           icon: '⚠️'
         });
       } else {
         store.addLog({
-          id: `log-${Date.now()}`,
-          timestamp: Date.now(),
           type: 'milestone',
           message: '🎉 All tasks completed! Objective achieved!',
           icon: '🎯'
@@ -44,19 +39,15 @@ export function useAgent() {
 
     const nextTask = pendingTasks[0];
     store.updateTask(nextTask.id, { status: 'running' });
-    store.setCurrentIteration(store.currentIteration + 1);
+    store.incrementIteration();
 
     store.addLog({
-      id: `log-${Date.now()}-start`,
-      timestamp: Date.now(),
       type: 'task',
       message: `Starting: ${nextTask.description}`,
       icon: '▶️'
     });
 
     store.addLog({
-      id: `log-${Date.now()}-processing`,
-      timestamp: Date.now(),
       type: 'thinking',
       message: 'Processing task...',
       icon: '🔍'
@@ -78,16 +69,12 @@ export function useAgent() {
       });
 
       store.addLog({
-        id: `log-${Date.now()}-complete`,
-        timestamp: Date.now(),
         type: 'success',
         message: `Completed: ${nextTask.description}`,
         icon: '✅'
       });
 
       store.addLog({
-        id: `log-${Date.now()}-result`,
-        timestamp: Date.now(),
         type: 'result',
         message: `Result: ${result}`,
         icon: '📊'
@@ -99,8 +86,6 @@ export function useAgent() {
       if (followUpTasks.length > 0) {
         followUpTasks.forEach(task => store.addTask(task));
         store.addLog({
-          id: `log-${Date.now()}-followup`,
-          timestamp: Date.now(),
           type: 'info',
           message: `Generated ${followUpTasks.length} follow-up task(s)`,
           icon: '📝'
@@ -114,8 +99,6 @@ export function useAgent() {
 
       if (progress === 25 || progress === 50 || progress === 75 || progress === 100) {
         store.addLog({
-          id: `log-${Date.now()}-milestone`,
-          timestamp: Date.now(),
           type: 'milestone',
           message: `Milestone: ${Math.round(progress)}% complete!`,
           icon: '🎯'
@@ -129,8 +112,6 @@ export function useAgent() {
       });
 
       store.addLog({
-        id: `log-${Date.now()}-error`,
-        timestamp: Date.now(),
         type: 'error',
         message: `Failed: ${nextTask.description} - ${error instanceof Error ? error.message : 'Unknown error'}`,
         icon: '❌'
@@ -162,8 +143,6 @@ export function useAgent() {
   const startAgent = () => {
     if (!store.objective.trim()) {
       store.addLog({
-        id: `log-${Date.now()}`,
-        timestamp: Date.now(),
         type: 'error',
         message: 'Please enter an objective first',
         icon: '❌'
@@ -177,40 +156,29 @@ export function useAgent() {
     prioritizedTasks.forEach(task => store.addTask(task));
     
     store.addLog({
-      id: `log-${Date.now()}`,
-      timestamp: Date.now(),
       type: 'info',
       message: `Generated ${initialTasks.length} initial tasks`,
       icon: '📝'
     });
 
-    store.setIsRunning(true);
-    store.setIsPaused(false);
+    store.startAgent();
   };
 
   const pauseAgent = () => {
-    store.setIsPaused(!store.isPaused);
+    store.pauseAgent();
     
     store.addLog({
-      id: `log-${Date.now()}`,
-      timestamp: Date.now(),
       type: 'info',
-      message: store.isPaused ? 'Agent resumed' : 'Agent paused',
-      icon: store.isPaused ? '▶️' : '⏸️'
+      message: store.isPaused ? 'Agent paused' : 'Agent resumed',
+      icon: store.isPaused ? '⏸️' : '▶️'
     });
   };
 
   const resetAgent = () => {
     stopAgentLoop();
-    store.setIsRunning(false);
-    store.setIsPaused(false);
-    store.setCurrentIteration(0);
-    store.clearTasks();
-    store.clearLogs();
+    store.resetAgent();
     
     store.addLog({
-      id: `log-${Date.now()}`,
-      timestamp: Date.now(),
       type: 'info',
       message: 'Agent reset',
       icon: '🔄'

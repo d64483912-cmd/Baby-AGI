@@ -18,7 +18,7 @@ export function useAgent() {
     const pendingTasks = store.tasks.filter(t => t.status === 'pending');
     
     if (pendingTasks.length === 0 || store.currentIteration >= store.maxIterations) {
-      store.startAgent(); // This will set isRunning to false when called again
+      store.stopAgent();
       stopAgentLoop();
       
       if (store.currentIteration >= store.maxIterations) {
@@ -57,9 +57,17 @@ export function useAgent() {
       let result: string;
       
       if (store.mode === 'ai') {
-        result = await executeTaskWithAI(nextTask, store.objective, store.settings);
+        const aiResponse = await executeTaskWithAI(
+          nextTask.description,
+          store.objective,
+          store.settings
+        );
+        if (aiResponse.error) {
+          throw new Error(aiResponse.error);
+        }
+        result = aiResponse.content;
       } else {
-        result = await simulateTaskExecution(nextTask);
+        result = await simulateTaskExecution(nextTask.description);
       }
 
       store.updateTask(nextTask.id, { 
